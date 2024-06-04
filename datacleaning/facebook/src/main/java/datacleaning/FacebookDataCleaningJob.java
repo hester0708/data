@@ -31,7 +31,7 @@ public class FacebookDataCleaningJob {
                 )
         );
         env.getCheckpointConfig().setCheckpointingMode(CheckpointingMode.EXACTLY_ONCE);
-
+        
         // Set up the Kafka properties
         Properties kafkaProps = new Properties();
         kafkaProps.setProperty("bootstrap.servers", "localhost:9092");
@@ -63,7 +63,8 @@ public class FacebookDataCleaningJob {
                 
 				// Create a new JSON object with the cleaned data
                 ObjectNode cleanedJson = JsonNodeFactory.instance.objectNode()
-                        .put("id", "fb" + postId)
+                        .put("platform_id", 0)
+                        .put("post_id", postId)
                         .putNull("username")
                         .putNull("title")
                         .put("content", message)

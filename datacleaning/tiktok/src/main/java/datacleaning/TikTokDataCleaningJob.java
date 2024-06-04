@@ -65,7 +65,8 @@ public class TikTokDataCleaningJob {
                 
 				// Create a new JSON object with the cleaned data
                 ObjectNode cleanedJson = JsonNodeFactory.instance.objectNode()
-                        .put("id", "tt" + postId)
+                        .put("platform_id", 3)
+                        .put("post_id", postId)
                         .put("username", author)
                         .put("title", title)
                         .put("content", text)

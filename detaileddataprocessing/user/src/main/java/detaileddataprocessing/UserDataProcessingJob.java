@@ -1,4 +1,4 @@
-package instagramdatacleaning;
+package userdataprocessing;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,11 +15,16 @@ import org.apache.flink.streaming.util.serialization.KeyedSerializationSchemaWra
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.api.common.functions.FlatMapFunction;
+import org.apache.flink.util.Collector;
+import java.util.HashMap;
+import java.util.Map;
 
 import java.util.Properties;
 
-public class InstagramDataCleaningJob {
+public class UserDataProcessingJob {
     public static void main(String[] args) throws Exception {
+
         // Set up the execution environment
         StreamExecutionEnvironment env = StreamExecutionEnvironment.getExecutionEnvironment();
 
@@ -35,12 +40,12 @@ public class InstagramDataCleaningJob {
         // Set up the Kafka properties
         Properties kafkaProps = new Properties();
         kafkaProps.setProperty("bootstrap.servers", "localhost:9092");
-        kafkaProps.setProperty("group.id", "instagramConsumer");
+        kafkaProps.setProperty("group.id", "rawConsumer");
         kafkaProps.setProperty("enable.auto.commit", "true");
 
         // Create a Kafka consumer
         FlinkKafkaConsumer<String> kafkaConsumer = new FlinkKafkaConsumer<>(
-                "instagram",
+                "rawdata",
                 new SimpleStringSchema(),
                 kafkaProps
         );
@@ -48,31 +53,40 @@ public class InstagramDataCleaningJob {
         // Read data from Kafka
         DataStream<String> input = env.addSource(kafkaConsumer);
 
-        // Perform data cleaning operations
-        DataStream<String> cleanedData = input.map(new MapFunction<String, String>() {
+        // Perform data processing operations
+        DataStream<String> processedData = input.flatMap(new FlatMapFunction<String, String>() {
             @Override
-            public String map(String value) throws Exception {
+            public void flatMap(String value, Collector<String> out) throws Exception {
                 // Parse the JSON object
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode jsonNode = mapper.readTree(value);
 
                 // Extract the desired fields from the JSON object
-                String code = jsonNode.get("shortcode").asText();
-                String userName = jsonNode.get("owner_username").asText();
-                String caption = jsonNode.get("caption").asText();
-				String simulationTime = jsonNode.get("simulation_time").asText();
-                
-				// Create a new JSON object with the cleaned data
-                ObjectNode cleanedJson = JsonNodeFactory.instance.objectNode()
-                        .put("platform_id", 2)
-                        .put("post_id", code)
-                        .put("username", userName)
-                        .putNull("title")
-                        .put("content", caption)
-                        .put("time", simulationTime);
+                String platformId = jsonNode.get("platform_id").asText();
+                String postId = jsonNode.get("post_id").asText();
+                String username = jsonNode.get("username").asText();
+                String time = jsonNode.get("time").asText();
+				
+				// Separate username string
+                String[] usernameSplit = username.split("\\s+");
+                Map<String, Integer> usernameMap = new HashMap<String, Integer>();
+                for(String word: usernameSplit){
+                    int cnt = usernameMap.containsKey(word) ? usernameMap.get(word) : 0;
+                    usernameMap.put(word, cnt + 1);
+                }
 
-                // Serialize the cleaned JSON object back to a string
-                return cleanedJson.toString();
+                // Create JSON objects with splitted data
+                for (Map.Entry<String, Integer> entry: usernameMap.entrySet()) {
+                    ObjectNode wordJson = JsonNodeFactory.instance.objectNode()
+                        .put("platform_id", platformId)
+                        .put("post_id", postId)
+                        .put("user_word", entry.getKey())
+                        .put("count", entry.getValue())
+                        .put("time", time);
+                        
+                    String wordData = wordJson.toString();
+                    out.collect(wordData);
+                }
             }
         });
 
@@ -82,16 +96,16 @@ public class InstagramDataCleaningJob {
 
         // Create a Kafka producer
         FlinkKafkaProducer<String> kafkaProducer = new FlinkKafkaProducer<>(
-                "rawdata",
+                "userword",
                 new KeyedSerializationSchemaWrapper<>(new SimpleStringSchema()),
                 producerProps,
                 FlinkKafkaProducer.Semantic.EXACTLY_ONCE
         );
 
         // Write cleaned data to Kafka
-        cleanedData.addSink(kafkaProducer);
+        processedData.addSink(kafkaProducer);
 
         // Execute the Flink job
-        env.execute("Instagram Data Cleaning Job");
+        env.execute("User Data Processing Job");
     }
 }

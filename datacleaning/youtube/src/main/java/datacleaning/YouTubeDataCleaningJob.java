@@ -65,7 +65,8 @@ public class YouTubeDataCleaningJob {
                 
 				// Create a new JSON object with the cleaned data
                 ObjectNode cleanedJson = JsonNodeFactory.instance.objectNode()
-                        .put("id", "yt" + videoId)
+                        .put("platform_id", 1)
+                        .put("post_id", videoId)
                         .put("username", channelTitle)
                         .put("title", title)
                         .put("content", description)

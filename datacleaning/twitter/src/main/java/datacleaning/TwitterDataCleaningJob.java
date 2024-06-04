@@ -64,7 +64,8 @@ public class TwitterDataCleaningJob {
                 
 				// Create a new JSON object with the cleaned data
                 ObjectNode cleanedJson = JsonNodeFactory.instance.objectNode()
-                        .put("id", "tw" + tweetId)
+                        .put("platform_id", 4)
+                        .put("post_id", tweetId)
                         .put("username", userName)
                         .putNull("title")
                         .put("content", text)
