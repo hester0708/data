@@ -21,11 +21,11 @@ under the License.
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>hester</groupId>
-	<artifactId>userdataprocessing</artifactId>
+	<artifactId>aggregateddataprocessing</artifactId>
 	<version>1.1</version>
 	<packaging>jar</packaging>
 
-	<name>User Data Processing Job</name>
+	<name>Aggregated Data Processing Job</name>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -61,8 +61,13 @@ under the License.
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-java</artifactId>
+			<version>1.14.3</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
 			<artifactId>flink-streaming-java_2.12</artifactId>
-			<version>1.14.0</version>
+			<version>1.14.3</version>
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
@@ -76,8 +81,8 @@ under the License.
 		</dependency>
 		<dependency>
 			<groupId>org.apache.flink</groupId>
-			<artifactId>flink-java</artifactId>
-			<version>1.14.0</version>
+			<artifactId>flink-scala_2.12</artifactId>
+			<version>1.14.3</version>
 		</dependency>
 
 		<!-- Kafka dependencies -->
@@ -120,6 +125,19 @@ under the License.
 			<artifactId>log4j-core</artifactId>
 			<version>${log4j.version}</version>
 			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Cassandra dependencies -->
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-connector-cassandra_2.11</artifactId>
+			<version>1.10.0</version>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.flink</groupId>
+			<artifactId>flink-streaming-scala_${scala.binary.version}</artifactId>
+			<version>${flink.version}</version>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 
@@ -173,7 +191,7 @@ under the License.
 							</filters>
 							<transformers>
 								<transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-									<mainClass>userdataprocessing.UserDataProcessingJob</mainClass>
+									<mainClass>aggregateddataprocessing.AggregatedDataProcessingJob</mainClass>
 								</transformer>
 							</transformers>
 						</configuration>

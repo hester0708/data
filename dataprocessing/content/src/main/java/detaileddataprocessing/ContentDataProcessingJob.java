@@ -1,4 +1,4 @@
-package userdataprocessing;
+package contentdataprocessing;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -22,7 +22,7 @@ import java.util.Map;
 
 import java.util.Properties;
 
-public class UserDataProcessingJob {
+public class ContentDataProcessingJob {
     public static void main(String[] args) throws Exception {
 
         // Set up the execution environment
@@ -64,23 +64,27 @@ public class UserDataProcessingJob {
                 // Extract the desired fields from the JSON object
                 String platformId = jsonNode.get("platform_id").asText();
                 String postId = jsonNode.get("post_id").asText();
-                String username = jsonNode.get("username").asText();
+                String title = jsonNode.get("title").asText();
+                String content = jsonNode.get("content").asText();
                 String time = jsonNode.get("time").asText();
 				
 				// Separate username string
-                String[] usernameSplit = username.split("\\s+");
-                Map<String, Integer> usernameMap = new HashMap<String, Integer>();
-                for(String word: usernameSplit){
-                    int cnt = usernameMap.containsKey(word) ? usernameMap.get(word) : 0;
-                    usernameMap.put(word, cnt + 1);
+                String fullContent = title + " " + content;
+                String[] contentSplit = fullContent.split("\\s+");
+                Map<String, Integer> contentMap = new HashMap<String, Integer>();
+                for(String word: contentSplit){
+                    word = word.toLowerCase();
+                    word = word.replaceAll("[^\\p{Alnum}\\s]", "");
+                    word = word.replaceAll("null", "");
+                    if(!word.equals("")) contentMap.put(word, 1);
                 }
 
                 // Create JSON objects with splitted data
-                for (Map.Entry<String, Integer> entry: usernameMap.entrySet()) {
+                for (Map.Entry<String, Integer> entry: contentMap.entrySet()) {
                     ObjectNode wordJson = JsonNodeFactory.instance.objectNode()
                         .put("platform_id", platformId)
                         .put("post_id", postId)
-                        .put("user_word", entry.getKey())
+                        .put("content_word", entry.getKey())
                         .put("count", entry.getValue())
                         .put("time", time);
                         
@@ -96,7 +100,7 @@ public class UserDataProcessingJob {
 
         // Create a Kafka producer
         FlinkKafkaProducer<String> kafkaProducer = new FlinkKafkaProducer<>(
-                "userword",
+                "contentword",
                 new KeyedSerializationSchemaWrapper<>(new SimpleStringSchema()),
                 producerProps,
                 FlinkKafkaProducer.Semantic.EXACTLY_ONCE
@@ -106,6 +110,6 @@ public class UserDataProcessingJob {
         processedData.addSink(kafkaProducer);
 
         // Execute the Flink job
-        env.execute("User Data Processing Job");
+        env.execute("Content Data Processing Job");
     }
 }

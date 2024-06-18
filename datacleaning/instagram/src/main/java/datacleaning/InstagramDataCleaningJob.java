@@ -15,6 +15,7 @@ import org.apache.flink.streaming.util.serialization.KeyedSerializationSchemaWra
 import org.apache.flink.api.common.restartstrategy.RestartStrategies;
 import org.apache.flink.api.common.time.Time;
 import org.apache.flink.streaming.api.environment.StreamExecutionEnvironment;
+import org.apache.flink.api.java.tuple.Tuple2;
 
 import java.util.Properties;
 
@@ -49,9 +50,9 @@ public class InstagramDataCleaningJob {
         DataStream<String> input = env.addSource(kafkaConsumer);
 
         // Perform data cleaning operations
-        DataStream<String> cleanedData = input.map(new MapFunction<String, String>() {
+        DataStream<Tuple2<String, String>> withKeys = input.map(new MapFunction<String, Tuple2<String, String>>() {
             @Override
-            public String map(String value) throws Exception {
+            public Tuple2<String, String> map(String value) throws Exception {
                 // Parse the JSON object
                 ObjectMapper mapper = new ObjectMapper();
                 JsonNode jsonNode = mapper.readTree(value);
@@ -72,7 +73,7 @@ public class InstagramDataCleaningJob {
                         .put("time", simulationTime);
 
                 // Serialize the cleaned JSON object back to a string
-                return cleanedJson.toString();
+                return new Tuple2<>(code, cleanedJson.toString());
             }
         });
 
@@ -89,7 +90,12 @@ public class InstagramDataCleaningJob {
         );
 
         // Write cleaned data to Kafka
-        cleanedData.addSink(kafkaProducer);
+        withKeys.keyBy(0).map(new MapFunction<Tuple2<String, String>, String>() {
+            @Override
+            public String map(Tuple2<String, String> value) throws Exception {
+                return value.f1;
+            }
+        }).addSink(kafkaProducer);
 
         // Execute the Flink job
         env.execute("Instagram Data Cleaning Job");
